@@ -3,14 +3,11 @@ Most of the rclone interfacing
 """
 import json
 import os
-import sys 
-import ctypes
-from collections import deque, defaultdict
-import subprocess, shlex
+
+import subprocess
 import lzma
 import time
-import re
-from itertools import zip_longest
+
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -19,8 +16,7 @@ from .log import debug, log, MINRCLONE
 from .dicttable import DictTable
 from . import utils
 from .backend.abc import Backend
-from .backend.localFS import Backend as LFS 
-import tempfile
+
 import hashlib
 import threading
 import logging
@@ -210,7 +206,7 @@ class PathMethods():
 
 class BackendHandler():
 
-    def __init__(self,backend:Backend,linkMode:int):
+    def __init__(self,backend:Backend,linkMode:int,workdir:str):
         self.backend = backend 
         self.linkParser = ParseLink()
         self.linkMode = linkMode
@@ -218,6 +214,7 @@ class BackendHandler():
         self.possibleDirs = set() 
         self.possibleFakefiles = set() 
         self.metaCache = dict() 
+        self.workdir = workdir
         
     def _clean_linkStore(self):
         self.possibleLinks = set()
@@ -234,14 +231,26 @@ class BackendHandler():
                 return self.backend.remoteMove(src,dst) 
             else:
                 log(f"[HIGH COST MOVE]: {rPathSrc} -> {rPathDst}") 
-                with tempfile.NamedTemporaryFile() as tmpfile:
-                    # 下载文件到临时文件
-                    self.backend.getFile(rPathRemote=rPathSrc, localPath=tmpfile.name)
-                    # 修改临时文件的元数据
-                    mtime = self.metaCache[rPathSrc]['mtime']
-                    os.utime(tmpfile.name, (mtime, mtime))
-                    # upload again 
-                    self.backend.putFile(localPath=tmpfile.name,rPathRemote=rPathDst)
+
+                tmpf = os.path.join(self.workdir,  f"remoteMove{str(time.time())}.f" )
+                self.backend.getFile(rPathRemote=rPathSrc, localPath=tmpf) 
+                mtime = self.metaCache[rPathSrc]['mtime']
+                os.utime(tmpf, (mtime, mtime))
+                self.backend.putFile(localPath=tmpf,rPathRemote=rPathDst)
+
+
+                # with tempfile.NamedTemporaryFile() as tmpfile:
+                #     # 下载文件到临时文件
+                #     self.backend.getFile(rPathRemote=rPathSrc, localPath=tmpfile.name)
+                #     # 修改临时文件的元数据
+                #     mtime = self.metaCache[rPathSrc]['mtime']
+                #     os.utime(tmpfile.name, (mtime, mtime))
+                #     # upload again 
+                #     self.backend.putFile(localPath=tmpfile.name,rPathRemote=rPathDst)
+
+
+
+
                 return 0
         if self.linkMode == 2:
             if (rPathSrc in self.possibleLinks) or (rPathSrc in self.possibleFakefiles):
@@ -583,11 +592,19 @@ class BackendHandler():
     
     def writeEmptyFile(self,path):
         new_mtime = 1700000000
-        with tempfile.NamedTemporaryFile(delete=True) as tmpfile:
-            localPath = tmpfile.name
-            os.utime(localPath, (new_mtime, new_mtime))
-            # 将临时文件上传到 B 服务器对应的路径
-            self.backend.putFile(localPath=localPath, rPathRemote=path) 
+        tmf = os.path.join(self.workdir, f"wEmp{str(time.time())}.tmpf0" )
+        with open(tmf,'w') as fi:
+            pass 
+        os.utime(tmf, (new_mtime, new_mtime))
+        # 将临时文件上传到 B 服务器对应的路径
+        self.backend.putFile(localPath=tmf, rPathRemote=path)         
+
+
+        # with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
+        #     localPath = tmpfile.name
+        #     os.utime(localPath, (new_mtime, new_mtime))
+        #     # 将临时文件上传到 B 服务器对应的路径
+        #     self.backend.putFile(localPath=localPath, rPathRemote=path) 
 
     def _createFakeLinkFile(self,path:str,target:str,isDir:bool):
         fp = self.linkParser.parsePath_realdir2fakefile(path,target,"d" if isDir else "f") 
@@ -609,7 +626,7 @@ def _makedirsIfNeeded(dirPath,backend:BackendHandler,lock):
     dirMeta = _get_Metadata(dirPath,backend,lock)
     if dirMeta is None:
         fatherDir,fname = PathMethods.splitPathAndName(dirPath)
-        if len(fatherDir) > 1:
+        if len(fatherDir) > 0:
             _makedirsIfNeeded(fatherDir,backend,lock)
         backend.backend.mkdir(dirPath) 
         with lock:
@@ -913,18 +930,18 @@ class Rclone:
         # workdir = getattr(config, f"workdir{AB}")
 
         dst = utils.pathjoin(workdir, f"{remote}-{self.syncConfig['name']}_fl.json.xz")
-        # src = os.path.join(self.tmpdir, f"{AB}_curr")
-        # mkdir(src, isdir=False)
 
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.xz', delete=True) as tmp:
-        # 使用 lzma 写入压缩数据
-            with lzma.open(tmp.name, "wt", encoding='utf-8') as file:
-                json.dump(list(filelist), file, ensure_ascii=False)
+        tmf = os.path.join( self.tmpdir, f"{remote}_pushfilelist_"+ str(int(time.time())) + ".xz" )
+        with lzma.open(tmf, "wt", encoding='utf-8') as file:
+            json.dump(list(filelist), file, ensure_ascii=False)
+        backend.backend.putFile(localPath=tmf,rPathRemote=dst)
 
-            # 需要确保 lzma 文件已关闭，因此在这里调用 upload
-            # 文件名仍然可用，因为我们仍在外层的 `with tempfile.NamedTemporaryFile` 块中
-            backend.backend.putFile(localPath=tmp.name,rPathRemote=dst)
+        # with tempfile.NamedTemporaryFile(mode='w', suffix='.xz', delete=True) as tmp:
+        # # 使用 lzma 写入压缩数据
+        #     with lzma.open(tmp.name, "wt", encoding='utf-8') as file:
+        #         json.dump(list(filelist), file, ensure_ascii=False)
+        #     backend.backend.putFile(localPath=tmp.name,rPathRemote=dst)
 
 
     def pull_prev_list(self, *, remote=None):
@@ -933,18 +950,34 @@ class Rclone:
         workdir = self.getWorkDirFromBackend(backend)
         src = utils.pathjoin(workdir, f"{AB}-{self.syncConfig['name']}_fl.json.xz")
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.xz', delete=True) as tmp:
-            rcode = backend.backend.getFile(rPathRemote=src,localPath=tmp.name)
-            if rcode == 0:
-                with lzma.open(tmp.name) as file:
-                    return json.load(file)
-            elif rcode == -1:
-                log(f"No previous list on {AB}. Reset state")
-                return []
-            else:
-                log(f"WARNING: Unexpected rclone return. Resetting state in {AB}")
-                log(f"WARNING: Missing previous state in {AB}. Resetting")
-                return [] 
+        tmf = os.path.join( self.tmpdir, f"{AB}_pullprevlist"+ str(int(time.time())) + ".xz" )
+        rcode = backend.backend.getFile(rPathRemote=src,localPath=tmf)
+        if rcode == 0:
+            with lzma.open(tmf) as file:
+                return json.load(file)
+        elif rcode == -1:
+            log(f"No previous list on {AB}. Reset state")
+            return []
+        else:
+            log(f"WARNING: Unexpected rclone return. Resetting state in {AB}")
+            log(f"WARNING: Missing previous state in {AB}. Resetting")
+            return [] 
+
+
+
+
+        # with tempfile.NamedTemporaryFile(mode='w', suffix='.xz', delete=True) as tmp:
+        #     rcode = backend.backend.getFile(rPathRemote=src,localPath=tmp.name)
+        #     if rcode == 0:
+        #         with lzma.open(tmp.name) as file:
+        #             return json.load(file)
+        #     elif rcode == -1:
+        #         log(f"No previous list on {AB}. Reset state")
+        #         return []
+        #     else:
+        #         log(f"WARNING: Unexpected rclone return. Resetting state in {AB}")
+        #         log(f"WARNING: Missing previous state in {AB}. Resetting")
+        #         return [] 
 
 
     def file_list(self, *, prev_list=None, remote=None)->tuple[DictTable,DictTable]:
@@ -1340,11 +1373,17 @@ class Rclone:
         log("")
         if not breaklock:
             log(f"Setting lock on {remote}")
-            with tempfile.NamedTemporaryFile(delete=True) as tmpfile:
-                localPath = tmpfile.name
-                with open(localPath, "wt") as F:
-                    F.write(self.nowStrTag) 
-                backend.backend.putFile(localPath=localPath,rPathRemote=lockDest)
+
+            tmf = os.path.join(self.workdir, f"{str(time.time())}.lockfile" )
+            with open(tmf, "wt") as F:
+                F.write(self.nowStrTag) 
+            backend.backend.putFile(localPath=tmf,rPathRemote=lockDest)    
+
+            # with tempfile.NamedTemporaryFile(delete=True) as tmpfile:
+            #     localPath = tmpfile.name
+            #     with open(localPath, "wt") as F:
+            #         F.write(self.nowStrTag) 
+            #     backend.backend.putFile(localPath=localPath,rPathRemote=lockDest)
         else:
             log(f"Breaking locks on {remote}. May return errors if {remote} is not locked")
             try:

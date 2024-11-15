@@ -23,6 +23,12 @@ class Backend():
         self.workdir = None  # <remote>/.tinysyncer
 
 
+        # default symbolic link type. 
+        # For many cases, we can detect the symbolic link without knowning its a file or directory. 
+        # Set a default type setting for this cases. 
+        self.symlinktype = 'd'    # 'd'/'f' 
+
+
     @abstractmethod
     def getSyncPath(self)->str:
         """print path position 

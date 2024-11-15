@@ -112,7 +112,7 @@ class Backend(BaseClass):
             elif stat.S_ISLNK(mode):
                 info['type'] = 'l'
                 info['target'] = self.sftp.readlink(abspath)
-                info['ltype'] = 'd' # default as dir 
+                info['ltype'] = self.symlinktype
                 try:
                     lpath = self.sftp.normalize(abspath)
                     target_attr = self.sftp.stat(lpath)

@@ -98,7 +98,13 @@ class Backend(BaseClass):
                 if entry.is_symlink():
                     data['type'] = 'l'
                     data['target'] = os.readlink(p)
-                    data['ltype'] = 'd' if entry.is_dir() else 'f' 
+                    try:
+                        data['ltype'] = 'd' if entry.is_dir() else 'f' 
+                    except:
+                        if self.symlinktype in ('d','f'):
+                            data['ltype'] = self.symlinktype 
+                        else:
+                            raise Exception(f"self.symlinktype can only be 'd'/'f'. But you input {self.symlinktype}")
                 elif entry.is_dir():
                     data['type'] = 'd'
                 elif entry.is_file:

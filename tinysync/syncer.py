@@ -71,10 +71,6 @@ def isWinAdmin():
 class Sync:
 
     def configValidation(self,syncConfig,handlers:dict[str,BackendHandler]):
-        # 在windows上创建软连接需要admin
-        if syncConfig['linkMode'] == 2 and sys.platform == 'win32':
-            if not isWinAdmin():
-                raise Exception("On Windows with linkMode=2 need Admin power")
             
         # 检查追踪move是否有效，如果backend不支持move，自动修改
         for AB in handlers:
@@ -82,6 +78,20 @@ class Sync:
                 if not handlers[AB]._isServersideSupport_move():
                     handlers[AB].backend.renames = False 
                     log(f"backend [{AB}] not support move, <rename> makes no sense, ignored")
+
+        
+    @staticmethod
+    def resetconfig_Windows_linkMode2(syncConfig:dict):
+        # 在windows上创建软连接需要admin
+        if syncConfig['linkMode'] == 2 and sys.platform == 'win32':
+            if not isWinAdmin():
+                syncConfig['linkMode'] = 0 
+                log("!!! Windows with linkMode=2 needs Admin permission. Reset to linkMode=0 (ignore symbolic links) ") 
+        return syncConfig
+
+
+
+
 
 
 
@@ -92,10 +102,11 @@ class Sync:
         Main sync object. If break_lock is not None, will *just* break the
         locks
         """
+        syncConfig = self.resetconfig_Windows_linkMode2(syncConfig)
 
         linkMode = syncConfig['linkMode']
-        backendHandlerA = BackendHandler(backendA,linkMode)
-        backendHandlerB = BackendHandler(backendB,linkMode)
+        backendHandlerA = BackendHandler(backendA,linkMode,workdir)
+        backendHandlerB = BackendHandler(backendB,linkMode,workdir)
         self.backend = {'A':backendHandlerA,'B':backendHandlerB}
 
         pathA = backendA.getSyncPath()
