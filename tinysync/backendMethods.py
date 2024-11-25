@@ -1020,6 +1020,8 @@ class Rclone:
         with lzma.open(tmf, "wt", encoding='utf-8') as file:
             json.dump(list(filelist), file, ensure_ascii=False)
         self.backend[remote].backend.putFile(localPath=tmf,rPathRemote=dst)
+        # print(tmf,"->",dst,) 
+        # _=input(" pause ")
         os.remove(tmf)
 
 
@@ -1027,8 +1029,9 @@ class Rclone:
     def pull_prev_list(self, *, remote=None):
         AB = remote
         backend = self.backend[AB] 
-        workdir = self.getWorkDirFromBackend(backend)
-        src = utils.pathjoin(workdir, f"{AB}-{self.syncConfig['name']}_fl.json.xz")
+        # workdir = self.getWorkDirFromBackend(backend)
+        # src = utils.pathjoin(workdir, f"{AB}-{self.syncConfig['name']}_fl.json.xz")
+        src = backend.getPushedListPath(AB) 
 
         tmf = os.path.join( self.tmpdir, f"{AB}_pullprevlist"+ str(int(time.time())) + ".xz" )
         rcode = backend.backend.getFile(rPathRemote=src,localPath=tmf)
@@ -1102,7 +1105,7 @@ class Rclone:
 
 
         def notInsideSubDirsInWorkdir(path):
-            return (not is_self_or_inside(subpath=path,fatherpath=workdirName)) #or path == workdirName
+            return (not is_self_or_inside(subpath=path,fatherpath=workdirName)) # or path == workdirName <- 不能listworkdir， preListFile 会被当成文件更新
 
         def isInsideLockdir(path):
             return is_self_or_inside(subpath=path,fatherpath=lockdirName)
@@ -1456,7 +1459,7 @@ class Rclone:
         lockFile = lockDir + "/lockfile" #+ f"{str(int(time.time()))}.lockfile"
         log("")
         if breaklock:
-            log(f"Breaking locks on {remote}. May return errors if {remote} is not locked")
+            # log(f"Breaking locks on {remote}. May return errors if {remote} is not locked")
             try:
                 backend.backend.deleteFile(lockFile)
             except subprocess.CalledProcessError:
