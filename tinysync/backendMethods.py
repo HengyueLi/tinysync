@@ -223,7 +223,7 @@ class BackendHandler():
         self.possibleLinks = set()
         self.possibleDirs = set() 
         self.possibleFakefiles = set() 
-        self.metaCache = dict() 
+        self.metaCache = {"":{"name":"",'type':'d','Size':0,'mtime':0} } #dict() 
 
     def getRemoteWorkDir(self):
         wd = self.backend.workdir 
