@@ -84,7 +84,9 @@ class YourBackend(Backend):
 
 ```
 
+# Notice
 
+Do NOT delete the workdir (the default is .tinysync) on backend-A while keeping it on backend-B. It will delete all files inside backend-B. Personally, I think this is not well-designed in [syncrclone](https://github.com/Jwink3101/syncrclone). However, I will not modify this "property" anymore. If you want to resync, deleting the workdir on both sides is safe.
 
 
 # Currently Implemented Backends
