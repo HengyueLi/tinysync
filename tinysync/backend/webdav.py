@@ -4,9 +4,13 @@ import logging
 import sys 
 import time 
 import datetime
+from .abc import pathjoin,remindPipInstall
 
-from webdav3.client import Client,RemoteResourceNotFound
-from .abc import pathjoin
+try:
+    from webdav3.client import Client,RemoteResourceNotFound
+except:
+    remindPipInstall(name='webdavclient3', pipname='webdavclient3')
+
 
 
 

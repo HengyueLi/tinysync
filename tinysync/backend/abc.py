@@ -251,3 +251,11 @@ def pathjoin(*args):
 
     path = os.path.join(path, *rest)
     return path
+
+
+
+
+
+def remindPipInstall(name,pipname):
+    print(f"\n\n to use this backend, you must install {name}\n\n") 
+    print(f" try to install by:\n   pip install {pipname} \n\n\n")

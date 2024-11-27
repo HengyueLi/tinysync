@@ -1,11 +1,14 @@
 from .abc import Backend as BaseClass
-import paramiko
 import datetime  
 import os 
 import stat
 import logging 
-from .abc import pathjoin
+from .abc import pathjoin,remindPipInstall
 
+try:
+    import paramiko
+except:
+    remindPipInstall( "paramiko","paramiko"  )
 
 
 class Backend(BaseClass):
