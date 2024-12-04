@@ -57,10 +57,19 @@ tinysync.syncronization(backendA,backendB)
 
 ```
 
-
-
 ## Synchronization between Any Two Backends
 This functionality allows synchronization between any two remote storage locations. The machine running this code acts as a "working machine" and retains no information about the two backends. All state information is stored on the backend side.
+
+
+## other backends
+
+rclone:
+
+```python
+rclone = tinysync.backend.Rclone(dirPath="disk:path/to/here")
+```
+
+
 
 
 # User-defined Backend
@@ -93,6 +102,8 @@ Do NOT delete the workdir (the default is .tinysync) on backend-A while keeping 
 - `tinysync.backend.LocalFS`
 - `tinysync.backend._WebDAV`
 - `tinysync.backend.NixSSH`
+- `tinysync.backend.Rclone` (consider to use [syncrclone](https://github.com/Jwink3101/syncrclone))
+
 
 more ...
 

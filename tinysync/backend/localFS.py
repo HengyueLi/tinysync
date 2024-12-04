@@ -67,9 +67,7 @@ class Backend(BaseClass):
             int: 0 -> success,  -1 -> file not exist. For some backends, return 0 for non-exist file deleting is also work!
         """
         try: 
-            print("here1",os.path.join( self._dirPath, rPathRemote ) )
             os.rmdir( os.path.join( self._dirPath, rPathRemote ) )
-            print("here2")
             return 0 
         except FileNotFoundError:
             return -1

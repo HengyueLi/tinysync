@@ -1077,7 +1077,6 @@ class Rclone:
         compute_hashes = "hash" in [self.syncConfig['compare'], backend.backend.renames] 
         reuse = compute_hashes and backend.backend.reuse_hashes
 
-    
 
 
         if compute_hashes and not reuse:
@@ -1110,9 +1109,12 @@ class Rclone:
         def isInsideLockdir(path):
             return is_self_or_inside(subpath=path,fatherpath=lockdirName)
 
+        
+
         # 1. outside workdir 
         # 2. inside lock dir 
         metaOutsideWorkdir = backend._RecursivelylistFilesInPath(rpath='',hash=isNeed_Hash,mtime=isNeed_modtime,pathFilter=notInsideSubDirsInWorkdir) 
+
         try:
             metaInsideLockdir = backend._RecursivelylistFilesInPath(rpath=lockdirName,hash=isNeed_Hash,mtime=isNeed_modtime,pathFilter=isInsideLockdir) 
         except:
@@ -1120,8 +1122,9 @@ class Rclone:
         meta = metaOutsideWorkdir | metaInsideLockdir
         files = [f for _,f in meta.items()]
 
+  
 
-
+        
 
         # Make them DictTables
         files = DictTable(files, fixed_attributes=["Path", "Size", "mtime"])

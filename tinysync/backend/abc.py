@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Callable
 import logging
 import os 
+import datetime
 # from .localFS import Backend as class_backend_FS
 
 
@@ -251,6 +252,46 @@ def pathjoin(*args):
 
     path = os.path.join(path, *rest)
     return path
+
+
+# Note to future self: Do not use this in other applications. See
+# DFB's parser which is much better
+def RFC3339_to_unix(timestr):
+    """
+    Parses RFC3339 into a unix time
+    """
+    d, t = timestr.split("T")
+    year, month, day = d.split("-")
+
+    t = t.replace("Z", "-00:00")  # zulu time
+    t = t.replace("-", ":-").replace("+", ":+")  # Add a new set
+    hh, mm, ss, tzhh, tzmm = t.split(":")
+
+    offset = -1 if tzhh.startswith("-") else +1
+    tzhh = tzhh[1:]
+
+    try:
+        ss, micro = ss.split(".")
+    except ValueError:
+        ss = ss
+        micro = "00"
+    micro = micro[:6]  # Python doesn't support beyond 999999
+
+    dt = datetime.datetime(
+        int(year),
+        int(month),
+        int(day),
+        hour=int(hh),
+        minute=int(mm),
+        second=int(ss),
+        microsecond=int(micro),
+    )
+    unix = (dt - datetime.datetime(1970, 1, 1)).total_seconds()
+
+    # Account for timezone which counts backwards so -=
+    unix -= int(tzhh) * 3600 * offset
+    unix -= int(tzmm) * 60 * offset
+    return unix
 
 
 
