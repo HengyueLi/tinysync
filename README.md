@@ -31,7 +31,7 @@ backendB = tinysync.backend._WebDAV(dirPath='p2',options=options)
 
 
 # run sync method
-tinysync.syncronization(backendA,backendB)
+tinysync.synchronization(backendA,backendB)
 
 ```
 
@@ -53,7 +53,7 @@ backendB = tinysync.backend._WebDAV(dirPath='p2',options=options)
 
 
 # run sync method
-tinysync.syncronization(backendA,backendB)
+tinysync.synchronization(backendA,backendB)
 
 ```
 
@@ -102,6 +102,7 @@ Do NOT delete the workdir (the default is .tinysync) on backend-A while keeping 
 - `tinysync.backend.LocalFS`
 - `tinysync.backend._WebDAV`
 - `tinysync.backend.NixSSH`
+- `tinysync.backend.FTP` (example: `FTP(dirPath="",host='127.0.0.1',username='123',password='456')`)
 - `tinysync.backend.Rclone` (consider to use [syncrclone](https://github.com/Jwink3101/syncrclone))
 
 

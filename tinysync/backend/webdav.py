@@ -6,10 +6,7 @@ import time
 import datetime
 from .abc import pathjoin,remindPipInstall
 
-try:
-    from webdav3.client import Client,RemoteResourceNotFound
-except:
-    remindPipInstall(name='webdavclient3', pipname='webdavclient3')
+
 
 
 
@@ -17,6 +14,13 @@ except:
 class Backend(BaseClass):
 
     def __init__(self,dirPath:str,options:dict):
+
+        try:
+            from webdav3.client import Client,RemoteResourceNotFound
+            self.RemoteResourceNotFound = RemoteResourceNotFound
+        except:
+            remindPipInstall(name='webdavclient3', pipname='webdavclient3')
+
         super().__init__()
         self._dirPath = dirPath
         self._client = Client(options)
@@ -102,7 +106,7 @@ class Backend(BaseClass):
             p = self._getValidPath(rPathRemote) 
             self._client.clean(p) 
             return 0 
-        except RemoteResourceNotFound:
+        except self.RemoteResourceNotFound:
             return -1 
         except:
             return -99 
@@ -174,7 +178,7 @@ class Backend(BaseClass):
             rPathAbs = self._getValidPath( rPathRemote )
             self._client.download_sync(remote_path=rPathAbs, local_path=localPath)
             return 0 
-        except RemoteResourceNotFound:
+        except self.RemoteResourceNotFound:
             return -1 
         except Exception as e:
             # 通用异常，用于捕获上述异常之外的其他异常
@@ -199,6 +203,25 @@ class Backend(BaseClass):
             return 0
         except:
             return -1   
+        
+    def remoteCopy(self, rPathSrc, rPathDst):
+        """ OPTIONAL IMPLEMENTATION 
+        copy a source (of file or dir) to target path
+
+        Args:
+            rPathSrc (str): source path
+            rPathDst (str): target path 
+
+        Returns:
+            int: error code, 0
+        """   
+        src = self._getValidPath(rpath=rPathSrc) 
+        dst = self._getValidPath(rpath=rPathDst)     
+        try:
+            self._client.copy(remote_path_from=src, remote_path_to=dst) 
+            return 0 
+        except Exception as e:
+            return -99 
     
     def deleteFile(self,rPathRemote:str): 
         """delete a remote file <rPathRemote>
@@ -212,7 +235,7 @@ class Backend(BaseClass):
             p = self._getValidPath(rPathRemote) 
             self._client.clean(p) 
             return 0 
-        except RemoteResourceNotFound:
+        except self.RemoteResourceNotFound:
             return -1 
         except:
             return -99 

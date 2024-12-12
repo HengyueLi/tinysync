@@ -5,15 +5,18 @@ import stat
 import logging 
 from .abc import pathjoin,remindPipInstall
 
-try:
-    import paramiko
-except:
-    remindPipInstall( "paramiko","paramiko"  )
+
 
 
 class Backend(BaseClass):
 
     def __init__(self,dirPath:str,paramikoConfig:dict):
+
+        try:
+            import paramiko
+        except:
+            remindPipInstall( "paramiko","paramiko"  )
+
         super().__init__()
         self._dirPath = dirPath
         self.client = paramiko.SSHClient()

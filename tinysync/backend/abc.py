@@ -296,7 +296,14 @@ def RFC3339_to_unix(timestr):
 
 
 
+class NotInstallError(Exception):pass 
+
 
 def remindPipInstall(name,pipname):
-    print(f"\n\n to use this backend, you must install {name}\n\n") 
-    print(f" try to install by:\n   pip install {pipname} \n\n\n")
+    print(f"\n\n to use this backend, you must install [{name}]. try to install it by:\n") 
+    print("====================================")
+    print(f"   pip install {pipname} ")
+    print("====================================")
+
+    
+    raise NotInstallError(f"please install by: [ pip install {pipname} ]")

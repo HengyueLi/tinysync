@@ -999,7 +999,15 @@ def syncronization(backendA:Backend, backendB:Backend,Config:dict=None, break_lo
             Config = configuration
         Sync(workdir=temp_dir,syncConfig=Config, backendA=backendA, backendB=backendB, break_lock=break_lock,returnVal=returnValue)
     print('Temporary directory has been cleaned up')
-    return returnValue[0]
+    res = returnValue[0] 
+    if res == -1:
+        log(f"ERROR: site {backendA.getSyncPath()} is locked. To continue, remove LOCK/lockfile in workdir (default is: .tinysync/LOCK/lockfile)")
+    elif res == -2:
+        log(f"ERROR: site {backendB.getSyncPath()} is locked. To continue, remove LOCK/lockfile in workdir (default is: .tinysync/LOCK/lockfile)")
+    elif res == 0:
+        log("Synchronization success!")
+    return res 
 
 
     
+synchronization = syncronization
