@@ -30,9 +30,19 @@ class Backend(BaseClass):
         self.ssh_session = self.client.get_transport().open_session()
 
     def __del__(self):
-        self.sftp.close()
-        self.client.close()
-        self.ssh_session.close()
+        try:
+            self.sftp.close()
+        except:
+            pass 
+        try:
+            self.ssh_session.close()
+        except:
+            pass 
+        try:
+            self.client.close() 
+        except:
+            pass
+
 
     def getSyncPath(self)->str:
         """print path position 
