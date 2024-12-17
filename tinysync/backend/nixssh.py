@@ -27,7 +27,6 @@ class Backend(BaseClass):
         except:
             raise Exception("Failed to connect")
         self.sftp = self.client.open_sftp()
-        self.ssh_session = self.client.get_transport().open_session()
 
     def __del__(self):
         try:
@@ -35,13 +34,21 @@ class Backend(BaseClass):
         except:
             pass 
         try:
-            self.ssh_session.close()
-        except:
-            pass 
-        try:
             self.client.close() 
         except:
             pass
+
+    def _sendcmd(self,cmd:str):
+        try:
+            ssh_session = self.client.get_transport().open_session()
+            ssh_session.exec_command(cmd)
+            exit_status = ssh_session.recv_exit_status()
+            return exit_status
+        except Exception as e:
+            print(f"Error copying file: {e}")
+        finally:
+            # 关闭 SSH 会话和连接
+            ssh_session.close()
 
 
     def getSyncPath(self)->str:
@@ -236,12 +243,13 @@ class Backend(BaseClass):
         src = self._getValidPath(  rPathSrc ) 
         dst = self._getValidPath(  rPathDst )
         cp_command = f"cp {src} {dst}"
-        self.ssh_session.exec_command(cp_command) 
-        exit_status = self.ssh_session.recv_exit_status()  # Blocking call
+        exit_status = self._sendcmd(cp_command)
         if exit_status == 0:
             return 0 
         else:
             return -1
+        
+        
 
 
     def mklink(self,rPathRemote:str,target:str,isDir:bool):
@@ -258,9 +266,8 @@ class Backend(BaseClass):
 
     def purge(self, rPathRemote: str) -> int:
         dst = self._getValidPath(  rPathRemote ) 
-        cp_command = f"rm -rf {dst}"
-        self.ssh_session.exec_command(cp_command) 
-        exit_status = self.ssh_session.recv_exit_status()  # Blocking call
+        rm_command = f"rm -rf {dst}"
+        exit_status = self._sendcmd(rm_command)
         if exit_status == 0:
             return 0 
         else:

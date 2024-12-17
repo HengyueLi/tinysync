@@ -103,7 +103,7 @@ class Sync:
 
 
 
-    def __init__(self,workdir,syncConfig, backendA:Backend, backendB:Backend, break_lock=None,returnVal=[None],**kw):
+    def __init__(self,workdir,syncConfig, backendA:Backend, backendB:Backend, break_lock=False,returnVal=[None],**kw):
         """_summary_
 
         Args:
@@ -111,7 +111,7 @@ class Sync:
             syncConfig (_type_): _description_
             backendA (Backend): _description_
             backendB (Backend): _description_
-            break_lock (_type_, optional): _description_. Defaults to None.
+            break_lock (_type_, optional): _description_. Defaults to False.
             returnVal (list, optional): _description_. Defaults to [None].
             saveStateB (bool, optional): if True, current state on B will NOT listed in realtime but read from a previously stored data. This is for realtime-sync tool 
         """        
@@ -141,11 +141,10 @@ class Sync:
         
         self.api = API( backendA=backendHandlerA, backendB=backendHandlerB,nowStrTag=self.now,syncConfig=self.syncConfig,workdir=workdir)
 
-        # self.run_shell(pre=True)
-
         if break_lock:
-            self.api.lock(breaklock=True, remote=break_lock)
-            return 
+            self.api.lock(breaklock=True, remote='A')
+            self.api.lock(breaklock=True, remote='B')
+            # return 
 
         # Get file lists
         log("")
@@ -161,9 +160,10 @@ class Sync:
         self.currA, self.prevA = listA.join()
         self.currB, self.prevB = listB.join()
 
-        # print("here") 
-        # print(backendHandlerA.metaCache,888)
-        # raise 
+        if (self.prevA is None) or (self.prevB is None):
+            log("One of pre_list not exist, clean pre_list at both sides")
+            self.prevA = DictTable([], fixed_attributes=["Path", "Size", "mtime"])
+            self.prevB = DictTable([], fixed_attributes=["Path", "Size", "mtime"])
 
         self.api.checkAndMakeRemoteWorkdir()
  
@@ -489,12 +489,6 @@ class Sync:
             fileB = self.currB[{"Path": path}]
             fileBp = self.prevB[{"Path": path}]
             fileAp = self.prevA[{"Path": path}]
-
-            # print("process:=====") 
-            # print(f"currentA=:",fileA)  
-            # print(f"currentB=:",fileB)  
-            # print(f"preA=:",fileAp) 
-            # print(f"preB=:",fileBp) 
 
             if fileA is None:  # fileB *must* exist
                 if not fileBp:

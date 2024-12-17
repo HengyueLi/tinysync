@@ -1040,7 +1040,7 @@ class Rclone:
                 return json.load(file)
         elif rcode == -1:
             log(f"No previous list on {AB}. Reset state")
-            return []
+            return None
         else:
             log(f"WARNING: Unexpected rclone return. Resetting state in {AB}")
             log(f"WARNING: Missing previous state in {AB}. Resetting")
@@ -1133,11 +1133,11 @@ class Rclone:
 
         if self.syncConfig['reset_state']:
             debug(f"Reset state on {AB}")
-            prev_list = []
+            prev_list = None
         else:
             prev_list = self.pull_prev_list(remote=AB)
 
-        if not isinstance(prev_list, DictTable):
+        if (prev_list is not None) and (not isinstance(prev_list, DictTable)):
             prev_list = DictTable(prev_list, fixed_attributes=["Path", "Size", "mtime"])
 
 
@@ -1152,25 +1152,18 @@ class Rclone:
 
         # 从prev_list中更新 curr_list 的 hash值。
         # 因为执行到这里isNeed_Hash = False，所以curr_list中没有hash值
-        for file in files:
-            prev = prev_list[ {k: file[k] for k in ["Size", "mtime", "Path"]} ]  # Will not find if no mtime not in remote
-            if ( (not prev) or ("Hashes" not in prev) or (not prev.get("mtime", None)) ):
-                # 如果没找到，或者前值中无Hashes，或者无mtime
-                not_hashed.append(file["Path"])
-            else:
-                updated += 1
-                file["Hashes"] = prev["Hashes"]
 
-
-        # for file in files:  # size,mtime,filename
-        #     # 对于 curr 中的file, 找到其再 prev_list 中的值
-        #     prev = prev_list[ {k: file[k] for k in ["Size", "mtime", "Path"]} ]  # Will not find if no mtime not in remote
-        #     # 如果没找到，或者前值中无Hashes，或者无mtime
-        #     if ( not prev or "Hashes" not in prev or not prev.get("mtime", None) ):  # or '_copied' in prev: # Do not reuse a copied hash in case of incompatability
-        #         not_hashed.append(file["Path"])
-        #         continue
-        #     updated += 1
-        #     file["Hashes"] = prev["Hashes"]
+        if prev_list is None:
+            not_hashed = [ file["Path"] for file in files]
+        else:
+            for file in files:
+                prev = prev_list[ {k: file[k] for k in ["Size", "mtime", "Path"]} ]  # Will not find if no mtime not in remote
+                if ( (not prev) or ("Hashes" not in prev) or (not prev.get("mtime", None)) ):
+                    # 如果没找到，或者前值中无Hashes，或者无mtime
+                    not_hashed.append(file["Path"])
+                else:
+                    updated += 1
+                    file["Hashes"] = prev["Hashes"]
 
 
         if len(not_hashed) == 0:
@@ -1462,7 +1455,6 @@ class Rclone:
         lockFile = lockDir + "/lockfile" #+ f"{str(int(time.time()))}.lockfile"
         log("")
         if breaklock:
-            # log(f"Breaking locks on {remote}. May return errors if {remote} is not locked")
             try:
                 backend.backend.deleteFile(lockFile)
             except subprocess.CalledProcessError:
